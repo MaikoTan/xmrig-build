@@ -56,7 +56,7 @@ jobs:
       shell: msys2 {0}
       working-directory: xmrig/build
       run: |
-        pacman -S mingw-w64-x86_64-gcc git make
+        pacman -S --noconfirm mingw-w64-x86_64-gcc git make
         cmake .. -G "Unix Makefiles" -DXMRIG_DEPS="$pwd/../../xmrig-deps/gcc/x64" -DCUDA_TOOLKIT_ROOT_DIR="${{steps.cuda-toolkit.outputs.CUDA_PATH}}"
         make -j$(nproc)
 
