@@ -1,0 +1,67 @@
+name: Build
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Checkout xmrig
+      uses: actions/checkout@v3
+      with:
+        repository: xmrig/xmrig
+        path: xmrig
+
+    - name: Checkout xmrig-deps
+      uses: actions/checkout@v3
+      with:
+        repository: xmrig/xmrig-deps
+        path: xmrig-deps
+
+    - name: Set artifact name
+      shell: bash
+      run: |
+        sha=$(echo ${{ github.sha }} | cut -c 1-8)
+        echo "artifact_sha=$sha" >> $GITHUB_ENV
+
+    - name: Setup cmake
+      uses: jwlawson/actions-setup-cmake@v1.9
+
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@v1.0.2
+
+    - name: cuda-toolkit
+      id: cuda-toolkit
+      uses: Jimver/cuda-toolkit@v0.2.11
+      with:
+        cuda-version: 11.2
+
+    - name: Apply patch
+      shell: bash
+      working-directory: xmrig
+      run: |
+        git apply ../001-disable-donate.patch
+
+    - name: Create Build Directory
+      run: |
+        mkdir xmrig\build
+
+    - name: Build artifact
+      shell: bash
+      working-directory: xmrig/build
+      run: |
+        cmake .. -G "Visual Studio 16 2019" -A x64 -DXMRIG_DEPS="$pwd\..\..\xmrig-deps\msvc2019\x64" -DCUDA_TOOLKIT_ROOT_DIR="${{steps.cuda-toolkit.outputs.CUDA_PATH}}"
+        cmake --build . --config Release
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: xmrig-${{ env.artifact_sha }}
+        path: xmrig/build
+        retention-days: 30
